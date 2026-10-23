@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Availability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F4F7; --card:#fff; --ink:#16202E; --muted:#5B6778; --line:#D5DBE3;
+  --available:#178A52; --available-bg:#DDF3E7;
+  --busy:#C93C3C;      --busy-bg:#FBE1E1;
+  --away:#5F6F86;      --away-bg:#E3E8EF;
+  --focus:#2B5FD9;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0F1620; --card:#18222F; --ink:#E8EDF4; --muted:#93A0B3; --line:#2B3848;
+    --available:#4CC98A; --available-bg:#17382B;
+    --busy:#F07676;      --busy-bg:#41222A;
+    --away:#9AA9BF;      --away-bg:#243142;
+    --focus:#7FA6FF;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,sans-serif;line-height:1.45}
+main{max-width:1040px;margin:0 auto;padding:32px 20px 64px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+h1{font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:-.02em;margin:0}
+.sync{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--away)}
+.sync.live .dot{background:var(--available);box-shadow:0 0 0 0 var(--available);animation:pulse 2s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.sync.live .dot{animation:none}}
+
+/* the one memorable element: a proportional bar of who is where */
+.bar{display:flex;height:18px;border-radius:9px;overflow:hidden;margin:22px 0 10px;background:var(--line)}
+.bar span{transition:flex-grow .4s ease;min-width:0}
+.bar .a{background:var(--available)} .bar .b{background:var(--busy)} .bar .w{background:var(--away)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:15px}
+.legend b{font-weight:800}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+
+form.add{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 20px}
+form.add input{flex:1 1 180px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
+button{font:inherit;cursor:pointer}
+form.add button{padding:10px 18px;border:0;border-radius:8px;background:var(--ink);color:var(--paper);font-weight:600}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.member{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--away);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.member[data-status=Available]{border-left-color:var(--available)}
+.member[data-status=Busy]{border-left-color:var(--busy)}
+.top{display:flex;gap:12px;align-items:center}
+.av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--away-bg);color:var(--away);flex:none}
+[data-status=Available] .av{background:var(--available-bg);color:var(--available)}
+[data-status=Busy] .av{background:var(--busy-bg);color:var(--busy)}
+.who{min-width:0;flex:1}
+.who strong{display:block;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who small{color:var(--muted)}
+.badge{padding:3px 10px;border-radius:99px;font-size:13px;font-weight:600;background:var(--away-bg);color:var(--away)}
+[data-status=Available] .badge{background:var(--available-bg);color:var(--available)}
+[data-status=Busy] .badge{background:var(--busy-bg);color:var(--busy)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{padding:8px 4px;border:0;background:transparent;color:var(--muted);font-weight:600;font-size:14px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{color:#fff}
+.seg button[data-s=Available][aria-pressed=true]{background:var(--available)}
+.seg button[data-s=Busy][aria-pressed=true]{background:var(--busy)}
+.seg button[data-s=Away][aria-pressed=true]{background:var(--away)}
+.seg button:not([aria-pressed=true]):hover{background:var(--paper)}
+.foot{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.foot button{border:0;background:none;color:var(--muted);text-decoration:underline;padding:2px}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
+.filters input,.filters select,form.add select{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
+.filters input{flex:1 1 200px}
+.lt{display:block;font-size:13px;color:var(--muted)}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+#notice{display:none;margin-top:16px;padding:10px 14px;border-radius:8px;background:var(--busy-bg);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Who's around</h1>
+    <div class="sync" id="sync" role="status"><span class="dot"></span><span id="syncText">Connecting…</span></div>
+  </header>
+
+  <div class="bar" aria-hidden="true"><span class="a" id="barA"></span><span class="b" id="barB"></span><span class="w" id="barW"></span></div>
+  <div class="legend">
+    <span><i style="background:var(--available)"></i><b id="cA">0</b> available</span>
+    <span><i style="background:var(--busy)"></i><b id="cB">0</b> busy</span>
+    <span><i style="background:var(--away)"></i><b id="cW">0</b> away</span>
+  </div>
+  <div id="notice">Data is stored in server memory and will reset. Set DATABASE_URL in Vercel to keep it permanently.</div>
+
+  <form class="add" id="addForm">
+    <input name="name" placeholder="Full name" required maxlength="60" aria-label="Full name">
+    <input name="role" placeholder="Role (optional)" maxlength="60" aria-label="Role">
+    <select name="timezone" aria-label="Timezone">
+      <option>Europe/London</option><option>Asia/Kolkata</option><option>America/New_York</option><option>UTC</option>
+    </select>
+    <button type="submit">Add member</button>
+  </form>
+
+  <div class="filters">
+    <input id="q" type="search" placeholder="Search by name" aria-label="Search by name">
+    <select id="fRole" aria-label="Filter by role"><option value="">All roles</option></select>
+    <select id="fStatus" aria-label="Filter by status"><option value="">All statuses</option><option>Available</option><option>Busy</option><option>Away</option></select>
+    <select id="fTz" aria-label="Filter by timezone"><option value="">All timezones</option></select>
+  </div>
+
+  <section id="grid" aria-live="polite"></section>
+</main>
+<div id="toast" role="alert"></div>
+
+<script>
+const STATUSES = ['Available','Busy','Away'];
+const POLL_MS = 3000;
+let members = [], pending = 0, lastSig = '';
+const $ = (id) => document.getElementById(id);
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, cache: 'no-store', ...opts });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+  if (s < 10) return 'just now';
+  if (s < 60) return Math.floor(s) + 's ago';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+
+function localTime(tz) {
+  try { return new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', timeZone: tz }).format(new Date()); }
+  catch { return ''; }
+}
+
+function initials(name) {
+  const w = name.trim().split(/\s+/);
+  return /^\d+$/.test(w[w.length - 1]) ? w[w.length - 1] : w.map((x) => x[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function syncOptions(sel, values) {
+  const cur = sel.value, first = sel.options[0];
+  sel.textContent = ''; sel.append(first);
+  [...new Set(values)].sort().forEach((v) => { const o = document.createElement('option'); o.textContent = v; sel.append(o); });
+  sel.value = values.includes(cur) ? cur : '';
+}
+
+function visible() {
+  const q = $('q').value.trim().toLowerCase(), r = $('fRole').value, s = $('fStatus').value, z = $('fTz').value;
+  return members.filter((m) => (!q || m.name.toLowerCase().includes(q)) && (!r || m.role === r) && (!s || m.status === s) && (!z || m.timezone === z));
+}
+
+function setLive(ok) {
+  $('sync').classList.toggle('live', ok);
+  $('syncText').textContent = ok ? 'Live · syncing every 3s' : 'Offline · retrying…';
+}
+
+function counts() {
+  const c = { Available: 0, Busy: 0, Away: 0 };
+  members.forEach((m) => c[m.status]++);
+  $('cA').textContent = c.Available; $('cB').textContent = c.Busy; $('cW').textContent = c.Away;
+  $('barA').style.flexGrow = c.Available; $('barB').style.flexGrow = c.Busy; $('barW').style.flexGrow = c.Away;
+}
+
+function render() {
+  counts();
+  const grid = $('grid');
+  grid.textContent = '';
+  syncOptions($('fRole'), members.map((m) => m.role).filter(Boolean));
+  syncOptions($('fTz'), members.map((m) => m.timezone));
+  const shown = visible();
+  if (!shown.length) {
+    const e = document.createElement('p'); e.className = 'empty';
+    e.textContent = members.length ? 'No one matches these filters.' : 'No team members yet. Add the first one above.';
+    grid.append(e); return;
+  }
+  for (const m of shown) {
+    const el = document.createElement('article');
+    el.className = 'member'; el.dataset.status = m.status;
+
+    const top = document.createElement('div'); top.className = 'top';
+    const av = document.createElement('div'); av.className = 'av';
+    av.textContent = initials(m.name);
+    const who = document.createElement('div'); who.className = 'who';
+    const n = document.createElement('strong'); n.textContent = m.name;
+    const r = document.createElement('small'); r.textContent = m.role || 'Team member';
+    const lt = document.createElement('small'); lt.className = 'lt'; lt.dataset.tz = m.timezone;
+    lt.textContent = localTime(m.timezone) + ' ' + m.timezone.split('/').pop().replace('_', ' ');
+    who.append(n, r, lt);
+    const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = m.status;
+    top.append(av, who, badge);
+
+    const seg = document.createElement('div'); seg.className = 'seg'; seg.setAttribute('role', 'group');
+    seg.setAttribute('aria-label', 'Set status for ' + m.name);
+    for (const s of STATUSES) {
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.s = s; b.textContent = s;
+      b.setAttribute('aria-pressed', String(m.status === s));
+      b.onclick = () => setStatus(m.id, s);
+      seg.append(b);
+    }
+
+    const foot = document.createElement('div'); foot.className = 'foot';
+    const t = document.createElement('span'); t.className = 'ts'; t.dataset.iso = m.updated_at; t.textContent = 'Updated ' + ago(m.updated_at);
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Remove';
+    del.setAttribute('aria-label', 'Remove ' + m.name);
+    del.onclick = () => removeMember(m);
+    foot.append(t, del);
+
+    el.append(top, seg, foot);
+    grid.append(el);
+  }
+}
+
+function apply(list) {
+  const sig = JSON.stringify(list);
+  if (sig === lastSig) return;
+  lastSig = sig; members = list; render();
+}
+
+async function load() {
+  if (pending) return;
+  try {
+    const d = await api('/api/members');
+    $('notice').style.display = d.persistent ? 'none' : 'block';
+    if (!pending) apply(d.members);
+    setLive(true);
+  } catch { setLive(false); }
+}
+
+async function setStatus(id, status) {
+  const m = members.find((x) => x.id === id);
+  if (!m || m.status === status) return;
+  const prev = { status: m.status, updated_at: m.updated_at };
+  m.status = status; m.updated_at = new Date().toISOString(); render();
+  pending++;
+  try {
+    const d = await api('/api/members/' + id, { method: 'PATCH', body: JSON.stringify({ status }) });
+    Object.assign(m, d.member);
+  } catch (e) {
+    Object.assign(m, prev); toast(e.message);
+  } finally { pending--; lastSig = JSON.stringify(members); render(); }
+}
+
+async function removeMember(m) {
+  if (!confirm('Remove ' + m.name + ' from the team?')) return;
+  pending++;
+  try {
+    await api('/api/members/' + m.id, { method: 'DELETE' });
+    members = members.filter((x) => x.id !== m.id);
+  } catch (e) { toast(e.message); }
+  finally { pending--; lastSig = JSON.stringify(members); render(); }
+}
+
+$('addForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const f = ev.target;
+  const body = JSON.stringify({ name: f.name.value, role: f.role.value, timezone: f.timezone.value });
+  pending++;
+  try {
+    const d = await api('/api/members', { method: 'POST', body });
+    members.push(d.member); f.reset();
+  } catch (e) { toast(e.message); }
+  finally { pending--; lastSig = JSON.stringify(members); render(); }
+});
+
+['q', 'fRole', 'fStatus', 'fTz'].forEach((id) => $(id).addEventListener('input', render));
+
+// live sync: poll, and refresh immediately when the tab becomes visible again
+load();
+setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+// keep "Updated 5m ago" text fresh without re-rendering
+setInterval(() => {
+  document.querySelectorAll('.ts').forEach((t) => (t.textContent = 'Updated ' + ago(t.dataset.iso)));
+  document.querySelectorAll('.lt').forEach((t) => (t.textContent = localTime(t.dataset.tz) + ' ' + t.dataset.tz.split('/').pop().replace('_', ' ')));
+}, 15000);
+</script>
+</body>
+</html>
