@@ -21,3 +21,5 @@ Live team status board (Available / Busy / Away) backed by Postgres, deployable 
 - DELETE /api/members/:id
 
 Live updates use 3s polling because Vercel serverless functions cannot hold WebSocket connections.
+
+Working Link - https://team-availability-tracker-iota.vercel.app/
